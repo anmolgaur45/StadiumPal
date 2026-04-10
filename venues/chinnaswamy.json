@@ -2,5 +2,111 @@
   "id": "chinnaswamy",
   "name": "M. Chinnaswamy Stadium",
   "city": "Bangalore",
-  "stations": []
+  "stations": [
+    {
+      "id": "gate-north",
+      "name": "North Gate",
+      "category": "gate",
+      "position": { "x": 50, "y": 5 },
+      "sections": ["101", "102", "103", "104", "105"]
+    },
+    {
+      "id": "gate-south",
+      "name": "South Gate (Pavilion)",
+      "category": "gate",
+      "position": { "x": 50, "y": 93 },
+      "sections": ["115", "116", "117", "118", "119"]
+    },
+    {
+      "id": "gate-east",
+      "name": "East Gate (Cubbon Rd)",
+      "category": "gate",
+      "position": { "x": 93, "y": 50 },
+      "sections": ["109", "110", "111", "112"]
+    },
+    {
+      "id": "gate-west",
+      "name": "West Gate (MG Rd)",
+      "category": "gate",
+      "position": { "x": 7, "y": 50 },
+      "sections": ["123", "124", "125", "126"]
+    },
+    {
+      "id": "food-north-a",
+      "name": "North Stand Kiosk A",
+      "category": "concession",
+      "position": { "x": 35, "y": 15 },
+      "sections": ["101", "102", "103", "104"]
+    },
+    {
+      "id": "food-north-b",
+      "name": "North Stand Kiosk B",
+      "category": "concession",
+      "position": { "x": 65, "y": 15 },
+      "sections": ["105", "106", "107", "108"]
+    },
+    {
+      "id": "food-south-pavilion",
+      "name": "Pavilion Café",
+      "category": "concession",
+      "position": { "x": 42, "y": 82 },
+      "sections": ["115", "116", "117", "118"]
+    },
+    {
+      "id": "food-south-kiosk",
+      "name": "South Stand Kiosk",
+      "category": "concession",
+      "position": { "x": 60, "y": 80 },
+      "sections": ["119", "120", "121", "122"]
+    },
+    {
+      "id": "food-east-beverages",
+      "name": "East Wing Beverages",
+      "category": "concession",
+      "position": { "x": 82, "y": 35 },
+      "sections": ["109", "110", "111"]
+    },
+    {
+      "id": "food-east-snacks",
+      "name": "East Wing Snacks",
+      "category": "concession",
+      "position": { "x": 80, "y": 65 },
+      "sections": ["112", "113", "114"]
+    },
+    {
+      "id": "food-west-counter",
+      "name": "West Counter",
+      "category": "concession",
+      "position": { "x": 18, "y": 42 },
+      "sections": ["123", "124", "125"]
+    },
+    {
+      "id": "food-corner-ne",
+      "name": "NE Corner Stall",
+      "category": "concession",
+      "position": { "x": 76, "y": 20 },
+      "sections": ["108", "109"]
+    },
+    {
+      "id": "restroom-north",
+      "name": "Restroom — North Block",
+      "category": "restroom",
+      "position": { "x": 50, "y": 20 },
+      "sections": ["102", "103", "104", "105", "106", "107"]
+    },
+    {
+      "id": "restroom-south",
+      "name": "Restroom — South Block",
+      "category": "restroom",
+      "position": { "x": 50, "y": 78 },
+      "sections": ["116", "117", "118", "119", "120", "121"]
+    },
+    {
+      "id": "restroom-east",
+      "name": "Restroom — East Block",
+      "category": "restroom",
+      "position": { "x": 78, "y": 50 },
+      "sections": ["110", "111", "112", "113"]
+    }
+  ]
 }

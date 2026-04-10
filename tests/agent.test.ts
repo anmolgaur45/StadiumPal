@@ -1,2 +1,4 @@
-// Day 5/6: agent decision logic tests
-import { describe, it, expect } from "vitest";
+// Agent decision logic tests — implemented on Day 5
+import { describe, it } from "vitest";
+
+describe.todo("decideNudge");
