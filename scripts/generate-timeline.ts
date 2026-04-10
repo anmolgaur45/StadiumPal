@@ -27,28 +27,39 @@ function sampleCurve(keyframes: Keyframe[], t: number): number {
   return last[1];
 }
 
-// Base wait-time curves per station category (IPL match, 90-minute window)
-// Shape: gate peaks at entry/exit, concessions peak at innings break (T≈43),
-// restrooms spike even harder at break then quickly clear.
+// IPL T20 match timeline (all times in minutes from first ball):
+//
+//   T=0      First ball, Innings 1 begins
+//   T=0–90   Innings 1 (20 overs, ~4.5 min/over with TV timeouts)
+//   T=90–95  Last few overs of Innings 1, crowd watching
+//   T=95–115 Innings break (20 min) — peak concession & restroom rush
+//   T=115    Innings 2 begins
+//   T=115–200 Innings 2
+//   T=195–210 Final overs + result + exit rush
+//
+// Base wait-time curves per category:
 const CATEGORY_CURVES: Record<string, Keyframe[]> = {
   gate: [
-    [0, 14], [5, 9], [12, 3], [40, 3],
-    [42, 6], [46, 3], [82, 3], [86, 9], [90, 16],
+    // Entry rush at match start, settled by T=25; exit surge at end
+    [0, 18], [10, 11], [25, 3], [90, 3],
+    [95, 5], [115, 3], [185, 4], [198, 10], [210, 20],
   ],
   concession: [
-    [0, 3], [10, 5], [20, 7], [35, 10],
-    [41, 8], [43, 20], [47, 12], [52, 9],
-    [65, 9], [72, 12], [78, 11], [86, 6], [90, 4],
+    // Moderate activity during innings 1, massive spike at break,
+    // another surge in death overs innings 2
+    [0, 4], [15, 6], [40, 9], [80, 12],
+    [90, 9], [100, 22], [112, 18], [120, 10],
+    [130, 8], [155, 9], [175, 13], [195, 8], [210, 5],
   ],
   restroom: [
-    [0, 1], [15, 2], [38, 4], [41, 8],
-    [43, 24], [47, 14], [52, 5], [65, 5],
-    [72, 7], [78, 6], [88, 4], [90, 8],
+    // Quiet during play, sharp spike at innings break, quick clear
+    [0, 2], [40, 3], [85, 6], [95, 10],
+    [100, 28], [112, 24], [120, 7], [130, 4],
+    [160, 5], [185, 7], [210, 11],
   ],
 };
 
-// Per-station scale factors introduce realistic variation between
-// stations sharing the same category curve.
+// Per-station scale factors introduce realistic variation within each category
 const STATION_SCALES: Record<string, number> = {
   "gate-north": 1.2,
   "gate-south": 0.9,
@@ -76,6 +87,8 @@ interface Venue {
   stations: Station[];
 }
 
+const MATCH_DURATION = 210; // minutes, T20 IPL match (first ball → result + exit)
+
 const venuePath = resolve(__dirname, "../venues/chinnaswamy.json");
 const venue: Venue = JSON.parse(readFileSync(venuePath, "utf-8"));
 
@@ -90,8 +103,8 @@ for (const station of venue.stations) {
 
   const scale = STATION_SCALES[station.id] ?? 1.0;
 
-  // Sample at every integer minute T=0..90 (91 values)
-  timeline[station.id] = Array.from({ length: 91 }, (_, t) => {
+  // Sample at every integer minute T=0..MATCH_DURATION (MATCH_DURATION+1 values)
+  timeline[station.id] = Array.from({ length: MATCH_DURATION + 1 }, (_, t) => {
     const raw = sampleCurve(keyframes, t) * scale;
     return Math.round(raw * 10) / 10; // one decimal place
   });
@@ -101,5 +114,5 @@ const outputPath = resolve(__dirname, "../venues/timeline.json");
 writeFileSync(outputPath, JSON.stringify(timeline, null, 2) + "\n");
 
 console.log(
-  `Generated wait-time timeline for ${Object.keys(timeline).length} stations → venues/timeline.json`
+  `Generated ${MATCH_DURATION}-minute T20 timeline for ${Object.keys(timeline).length} stations → venues/timeline.json`
 );
