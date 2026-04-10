@@ -29,13 +29,19 @@ function sampleCurve(keyframes: Keyframe[], t: number): number {
 
 // IPL T20 match timeline (all times in minutes from first ball):
 //
-//   T=0      First ball, Innings 1 begins
-//   T=0–90   Innings 1 (20 overs, ~4.5 min/over with TV timeouts)
-//   T=90–95  Last few overs of Innings 1, crowd watching
-//   T=95–115 Innings break (20 min) — peak concession & restroom rush
-//   T=115    Innings 2 begins
+//   T=0       First ball, Innings 1 begins
+//   T=0–90    Innings 1 (20 overs, ~4.5 min/over with TV timeouts)
+//   T=90–95   Last few overs of Innings 1, crowd watching
+//   T=95–115  Innings break (20 min) — peak concession & restroom rush
+//   T=115     Innings 2 begins
 //   T=115–200 Innings 2
 //   T=195–210 Final overs + result + exit rush
+//
+// NOTE: these timings are assumptions used for development and testing purposes.
+// Real IPL match durations vary significantly — a 20-over innings can run
+// 75–110+ minutes depending on bowling pace, DRS reviews, strategic timeouts,
+// and rain delays. In production, this curve data would come from live POS
+// systems, gate scanners, and queue-detection cameras.
 //
 // Base wait-time curves per category:
 const CATEGORY_CURVES: Record<string, Keyframe[]> = {
