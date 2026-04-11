@@ -5,6 +5,7 @@ import { initUser } from "@/lib/user";
 import type { AppUser } from "@/lib/user";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import NudgeToast from "@/components/NudgeToast";
 
 // DigitalTwin uses SVG + intervals — skip SSR
 const DigitalTwin = dynamic(() => import("@/components/DigitalTwin"), { ssr: false });
@@ -21,6 +22,37 @@ export default function Home() {
         setError("Failed to start session. Check your connection.");
       });
   }, []);
+
+  // Agent tick — fires once per match-minute to check for nudge opportunities
+  useEffect(() => {
+    if (!user) return;
+
+    async function tick() {
+      if (!user) return;
+      try {
+        await fetch("/api/agent/tick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.uid,
+            matchStartedAt: user.matchStartedAt,
+            seat: user.seat,
+            preferences: user.preferences,
+          }),
+        });
+      } catch {
+        // silent — nudges are best-effort
+      }
+    }
+
+    // First tick after 30s (let the user settle in), then every 60s
+    const firstTimer = setTimeout(tick, 30_000);
+    const interval = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(firstTimer);
+      clearInterval(interval);
+    };
+  }, [user]);
 
   if (error) {
     return (
@@ -58,6 +90,7 @@ export default function Home() {
       </header>
 
       <DigitalTwin user={user} />
+      <NudgeToast userId={user.uid} />
     </main>
   );
 }
