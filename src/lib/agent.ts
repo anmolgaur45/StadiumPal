@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getModel } from "./gemini";
+import { logger } from "./logger";
 import type { StationWithWait, User } from "@/types/venue";
 
 export type AgentInput = {
@@ -122,7 +123,7 @@ export async function decideNudge(input: AgentInput): Promise<AgentDecision> {
     const parsed = DecisionSchema.parse(JSON.parse(text));
     return parsed;
   } catch (err) {
-    console.error("agent decision failed", err);
+    logger.error("agent decision failed", { err: String(err) });
     return { action: "wait", reasoning: "decision service unavailable" };
   }
 }

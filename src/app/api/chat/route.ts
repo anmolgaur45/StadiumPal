@@ -4,6 +4,7 @@ import { FunctionDeclarationSchemaType } from "@google-cloud/vertexai";
 import type { Tool, Part } from "@google-cloud/vertexai";
 import { getModel } from "@/lib/gemini";
 import { getWaitTime } from "@/lib/timeline";
+import { logger } from "@/lib/logger";
 import venueConfig from "../../../../venues/chinnaswamy.json";
 import type { Station } from "@/types/venue";
 
@@ -144,9 +145,10 @@ Responses must be short and actionable — this is a mobile app. 2–3 sentences
       response.candidates?.[0]?.content?.parts?.find((p) => "text" in p && p.text)?.text ??
       "Sorry, I couldn't get a response right now. Try again in a moment.";
 
+    logger.info("chat completed", { elapsed: Math.round(elapsed), rounds: 3 });
     return NextResponse.json({ message: text as string });
   } catch (err) {
-    console.error("chat error", err);
+    logger.error("chat error", { err: String(err) });
     return NextResponse.json({ error: "service unavailable" }, { status: 503 });
   }
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { decideNudge } from "@/lib/agent";
+import { logger } from "@/lib/logger";
 import { getWaitTime } from "@/lib/timeline";
 import venueConfig from "../../../../../venues/chinnaswamy.json";
 import type { Station, StationWithWait } from "@/types/venue";
@@ -72,8 +73,10 @@ export async function POST(req: NextRequest) {
       createdAt: Timestamp.now(),
       read: false,
     });
+    logger.info("nudge written", { userId, elapsed: Math.round(elapsed), nudgeId: nudgeRef.id });
     return NextResponse.json({ action: "nudge", nudgeId: nudgeRef.id });
   }
 
+  logger.info("agent tick: wait", { userId, elapsed: Math.round(elapsed), reasoning: decision.reasoning });
   return NextResponse.json({ action: "wait", reasoning: decision.reasoning });
 }
