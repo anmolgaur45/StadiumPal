@@ -9,6 +9,8 @@ import NudgeToast from "@/components/NudgeToast";
 
 // DigitalTwin uses SVG + intervals — skip SSR
 const DigitalTwin = dynamic(() => import("@/components/DigitalTwin"), { ssr: false });
+// ExitChoreographer uses SVG + fetch — skip SSR
+const ExitChoreographer = dynamic(() => import("@/components/ExitChoreographer"), { ssr: false });
 
 export default function Home() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -90,6 +92,7 @@ export default function Home() {
       </header>
 
       <DigitalTwin user={user} />
+      <ExitChoreographer user={user} />
       <NudgeToast userId={user.uid} />
     </main>
   );
