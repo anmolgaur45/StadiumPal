@@ -2,34 +2,45 @@
   "id": "chinnaswamy",
   "name": "M. Chinnaswamy Stadium",
   "city": "Bangalore",
+  "visualization": {
+    "fansPerDot": 100
+  },
   "stations": [
     {
       "id": "gate-north",
       "name": "North Gate",
       "category": "gate",
       "position": { "x": 50, "y": 5 },
-      "sections": ["101", "102", "103", "104", "105"]
+      "sections": ["101", "102", "103", "104", "105"],
+      "throughputPerMinute": 150,
+      "neighbors": ["gate-east", "gate-west"]
     },
     {
       "id": "gate-south",
       "name": "South Gate (Pavilion)",
       "category": "gate",
       "position": { "x": 50, "y": 93 },
-      "sections": ["115", "116", "117", "118", "119"]
+      "sections": ["115", "116", "117", "118", "119"],
+      "throughputPerMinute": 130,
+      "neighbors": ["gate-east", "gate-west"]
     },
     {
       "id": "gate-east",
       "name": "East Gate (Cubbon Rd)",
       "category": "gate",
       "position": { "x": 93, "y": 50 },
-      "sections": ["109", "110", "111", "112"]
+      "sections": ["109", "110", "111", "112"],
+      "throughputPerMinute": 110,
+      "neighbors": ["gate-north", "gate-south"]
     },
     {
       "id": "gate-west",
       "name": "West Gate (MG Rd)",
       "category": "gate",
       "position": { "x": 7, "y": 50 },
-      "sections": ["123", "124", "125", "126"]
+      "sections": ["123", "124", "125", "126"],
+      "throughputPerMinute": 100,
+      "neighbors": ["gate-north", "gate-south"]
     },
     {
       "id": "food-north-a",
@@ -108,5 +119,61 @@
       "position": { "x": 78, "y": 50 },
       "sections": ["110", "111", "112", "113"]
     }
+  ],
+  "sections": [
+    { "id": "101", "capacity": 1600, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 19, "y": 34 } },
+    { "id": "102", "capacity": 1550, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 30, "y": 22 } },
+    { "id": "103", "capacity": 1600, "exitProfile": { "early": 0.18, "immediate": 0.62, "late": 0.20 }, "position": { "x": 41, "y": 16 } },
+    { "id": "104", "capacity": 1600, "exitProfile": { "early": 0.15, "immediate": 0.65, "late": 0.20 }, "position": { "x": 50, "y": 14 } },
+    { "id": "105", "capacity": 1600, "exitProfile": { "early": 0.18, "immediate": 0.62, "late": 0.20 }, "position": { "x": 59, "y": 16 } },
+    { "id": "106", "capacity": 1550, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 70, "y": 22 } },
+    { "id": "107", "capacity": 1550, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 78, "y": 30 } },
+    { "id": "108", "capacity": 1400, "exitProfile": { "early": 0.25, "immediate": 0.55, "late": 0.20 }, "position": { "x": 83, "y": 40 } },
+    { "id": "109", "capacity": 1250, "exitProfile": { "early": 0.20, "immediate": 0.58, "late": 0.22 }, "position": { "x": 84, "y": 26 } },
+    { "id": "110", "capacity": 1300, "exitProfile": { "early": 0.18, "immediate": 0.60, "late": 0.22 }, "position": { "x": 85, "y": 37 } },
+    { "id": "111", "capacity": 1400, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 86, "y": 47 } },
+    { "id": "112", "capacity": 1400, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 85, "y": 57 } },
+    { "id": "113", "capacity": 1300, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 83, "y": 67 } },
+    { "id": "114", "capacity": 1250, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 79, "y": 75 } },
+    { "id": "115", "capacity": 950,  "exitProfile": { "early": 0.15, "immediate": 0.50, "late": 0.35 }, "position": { "x": 74, "y": 82 } },
+    { "id": "116", "capacity": 1000, "exitProfile": { "early": 0.12, "immediate": 0.50, "late": 0.38 }, "position": { "x": 63, "y": 85 } },
+    { "id": "117", "capacity": 1100, "exitProfile": { "early": 0.15, "immediate": 0.55, "late": 0.30 }, "position": { "x": 54, "y": 87 } },
+    { "id": "118", "capacity": 1000, "exitProfile": { "early": 0.12, "immediate": 0.52, "late": 0.36 }, "position": { "x": 50, "y": 87 } },
+    { "id": "119", "capacity": 1100, "exitProfile": { "early": 0.15, "immediate": 0.55, "late": 0.30 }, "position": { "x": 45, "y": 86 } },
+    { "id": "120", "capacity": 1000, "exitProfile": { "early": 0.18, "immediate": 0.58, "late": 0.24 }, "position": { "x": 36, "y": 84 } },
+    { "id": "121", "capacity": 950,  "exitProfile": { "early": 0.20, "immediate": 0.58, "late": 0.22 }, "position": { "x": 26, "y": 81 } },
+    { "id": "122", "capacity": 850,  "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 18, "y": 74 } },
+    { "id": "123", "capacity": 1050, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 21, "y": 66 } },
+    { "id": "124", "capacity": 1200, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 16, "y": 55 } },
+    { "id": "125", "capacity": 1200, "exitProfile": { "early": 0.20, "immediate": 0.60, "late": 0.20 }, "position": { "x": 16, "y": 43 } },
+    { "id": "126", "capacity": 1000, "exitProfile": { "early": 0.22, "immediate": 0.58, "late": 0.20 }, "position": { "x": 20, "y": 32 } }
+  ],
+  "sectionGateMap": [
+    { "section": "101", "gate": "gate-north", "walkMinutes": 3 },
+    { "section": "102", "gate": "gate-north", "walkMinutes": 3 },
+    { "section": "103", "gate": "gate-north", "walkMinutes": 4 },
+    { "section": "104", "gate": "gate-north", "walkMinutes": 4 },
+    { "section": "105", "gate": "gate-north", "walkMinutes": 4 },
+    { "section": "106", "gate": "gate-north", "walkMinutes": 5 },
+    { "section": "107", "gate": "gate-north", "walkMinutes": 5 },
+    { "section": "108", "gate": "gate-north", "walkMinutes": 5 },
+    { "section": "109", "gate": "gate-east",  "walkMinutes": 3 },
+    { "section": "110", "gate": "gate-east",  "walkMinutes": 3 },
+    { "section": "111", "gate": "gate-east",  "walkMinutes": 4 },
+    { "section": "112", "gate": "gate-east",  "walkMinutes": 4 },
+    { "section": "113", "gate": "gate-east",  "walkMinutes": 5 },
+    { "section": "114", "gate": "gate-east",  "walkMinutes": 5 },
+    { "section": "115", "gate": "gate-south", "walkMinutes": 3 },
+    { "section": "116", "gate": "gate-south", "walkMinutes": 3 },
+    { "section": "117", "gate": "gate-south", "walkMinutes": 4 },
+    { "section": "118", "gate": "gate-south", "walkMinutes": 4 },
+    { "section": "119", "gate": "gate-south", "walkMinutes": 4 },
+    { "section": "120", "gate": "gate-south", "walkMinutes": 5 },
+    { "section": "121", "gate": "gate-south", "walkMinutes": 5 },
+    { "section": "122", "gate": "gate-south", "walkMinutes": 5 },
+    { "section": "123", "gate": "gate-west",  "walkMinutes": 3 },
+    { "section": "124", "gate": "gate-west",  "walkMinutes": 3 },
+    { "section": "125", "gate": "gate-west",  "walkMinutes": 4 },
+    { "section": "126", "gate": "gate-west",  "walkMinutes": 4 }
   ]
 }

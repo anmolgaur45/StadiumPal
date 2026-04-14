@@ -11,6 +11,31 @@ export const StationSchema = z.object({
   sections: z.array(z.string()),
 });
 
+export const GateStationSchema = StationSchema.extend({
+  throughputPerMinute: z.number().int().positive(),
+  neighbors: z.array(z.string()),
+});
+
+export const SectionConfigSchema = z.object({
+  id: z.string(),
+  capacity: z.number().int().positive(),
+  exitProfile: z.object({
+    early: z.number().min(0).max(1),
+    immediate: z.number().min(0).max(1),
+    late: z.number().min(0).max(1),
+  }),
+  position: z.object({
+    x: z.number().min(0).max(100),
+    y: z.number().min(0).max(100),
+  }),
+});
+
+export const SectionGateEntrySchema = z.object({
+  section: z.string(),
+  gate: z.string(),
+  walkMinutes: z.number().int().positive(),
+});
+
 export const VenueSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -45,11 +70,17 @@ export const StationWithWaitSchema = StationSchema.extend({
 });
 
 export type Station = z.infer<typeof StationSchema>;
+export type GateStation = z.infer<typeof GateStationSchema>;
+export type SectionConfig = z.infer<typeof SectionConfigSchema>;
+export type SectionGateEntry = z.infer<typeof SectionGateEntrySchema>;
 export type Venue = z.infer<typeof VenueSchema>;
 export type Seat = z.infer<typeof SeatSchema>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 export type Nudge = z.infer<typeof NudgeSchema>;
 export type StationWithWait = z.infer<typeof StationWithWaitSchema>;
+
+// FlowMatrix: gateId → array of length 46, index i = minute (175 + i), T=175..220
+export type FlowMatrix = Record<string, number[]>;
 
 // Agent-facing user type — matchStartedAt is stored in Firestore as a Timestamp
 // and converted to epoch ms before being passed into the agent
