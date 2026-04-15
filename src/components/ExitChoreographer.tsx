@@ -135,7 +135,8 @@ function StadiumBase() {
 // ---------------------------------------------------------------------------
 
 interface PanelProps {
-  label: "Natural flow" | "Choreographed";
+  label: string;
+  subtitle: string;
   matrix: FlowMatrix;
   gates: GateStation[];
   sectionDots: DotGroup[];
@@ -147,6 +148,7 @@ interface PanelProps {
 
 function FlowPanel({
   label,
+  subtitle,
   matrix,
   gates,
   sectionDots,
@@ -165,6 +167,7 @@ function FlowPanel({
   return (
     <div className="flex-1 flex flex-col gap-1.5 min-w-0">
       <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{label}</p>
+      <p className="text-xs text-gray-600 -mt-1">{subtitle}</p>
       <div
         className="relative rounded-xl overflow-hidden border border-gray-700 bg-gray-900"
         style={{ paddingBottom: "100%" }}
@@ -322,12 +325,14 @@ export default function ExitChoreographer({ user }: Props) {
   }, [user]);
 
   // ---------------------------------------------------------------------------
-  // Auto-play once when data first arrives
+  // Auto-play once when data first arrives — start 5 min before departure so the
+  // countdown goes "In 5 min → In 4 min → ... → Now!" during the animation.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (data && !hasAutoPlayedRef.current) {
       hasAutoPlayedRef.current = true;
-      setCurrentT(FLOW_START);
+      const startT = Math.max(FLOW_START, data.userAssignment.leaveAtElapsed - 5);
+      setCurrentT(startT);
       setIsPlaying(true);
     }
   }, [data]);
@@ -391,6 +396,31 @@ export default function ExitChoreographer({ user }: Props) {
     [user.seat.section]
   );
 
+  // Peak congestion reduction across the entire matrix (stable — doesn't flicker with animation)
+  const benefitStats = useMemo(() => {
+    if (!data) return null;
+    const naturalPeak = Math.max(
+      ...gates.flatMap((g) => (data.naturalMatrix[g.id] ?? []).map((load) => load / g.throughputPerMinute))
+    );
+    const choreoPeak = Math.max(
+      ...gates.flatMap((g) => (data.choreographedMatrix[g.id] ?? []).map((load) => load / g.throughputPerMinute))
+    );
+    const saved = Math.round((naturalPeak - choreoPeak) * 100);
+    return saved > 0 ? { naturalPeak, choreoPeak, saved } : null;
+  }, [data, gates]);
+
+  // Worst-case wait at the user's gate across the whole timeline — used for the "saved vs peak" metric
+  const peakWait = useMemo(() => {
+    if (!data) return 0;
+    const loads = data.choreographedMatrix[data.userAssignment.gateId] ?? [];
+    if (loads.length === 0) return data.userAssignment.predictedWait;
+    const peakLoad = Math.max(...loads);
+    const leaveAtIdx = clamp(data.userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
+    const loadAtLeave = loads[leaveAtIdx] ?? 1;
+    if (loadAtLeave === 0) return data.userAssignment.predictedWait;
+    return Math.max(0.5, data.userAssignment.predictedWait * (peakLoad / loadAtLeave));
+  }, [data]);
+
   // ---------------------------------------------------------------------------
   // Per-frame derived data (currentT-dependent)
   // ---------------------------------------------------------------------------
@@ -418,6 +448,17 @@ export default function ExitChoreographer({ user }: Props) {
   const { userAssignment, recommendation, urgency } = data;
   const urgencyColor = URGENCY_COLOR[urgency];
 
+  // Simulation status — banner label tracks the animation, so it tells a coherent story
+  // as the scrubber moves: "Leave in 5 min" → "Go now" → "5 min late, wait time rising".
+  const minsToLeave = userAssignment.leaveAtElapsed - currentT;
+  const simStatus = minsToLeave > 1
+    ? { label: `LEAVE IN ~${Math.round(minsToLeave)} MIN`, color: minsToLeave > 5 ? "#eab308" : "#f97316" }
+    : minsToLeave > 0
+      ? { label: "LEAVE IN ~1 MIN", color: "#f97316" }
+      : minsToLeave > -0.5
+        ? { label: "GO NOW — LEAVE IMMEDIATELY", color: "#ef4444" }
+        : { label: `${Math.round(-minsToLeave)} MIN LATE — WAIT TIME RISING`, color: "#ef4444" };
+
   function togglePlay() {
     if (currentT >= FLOW_END) {
       setCurrentT(FLOW_START);
@@ -439,21 +480,21 @@ export default function ExitChoreographer({ user }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-400">
           Exit Choreographer
         </h2>
-        <p className="text-xs text-gray-600 mt-0.5">
-          System-coordinated fan exit · T=175 → 220
+        <p className="text-xs text-gray-500 mt-0.5">
+          See how spreading the crowd cuts your wait time
         </p>
       </div>
 
-      {/* Urgency banner + Gemini recommendation */}
+      {/* Simulation banner — label tracks the scrubber, recommendation text stays put */}
       <div
-        className="rounded-xl border p-3 flex flex-col gap-1.5"
-        style={{ borderColor: urgencyColor + "50", backgroundColor: urgencyColor + "10" }}
+        className="rounded-xl border p-3 flex flex-col gap-1.5 transition-colors"
+        style={{ borderColor: simStatus.color + "50", backgroundColor: simStatus.color + "10" }}
         role="status"
         aria-live="polite"
-        aria-label={`Exit urgency: ${URGENCY_LABEL[urgency]}`}
+        aria-label={`Simulation status: ${simStatus.label}`}
       >
-        <span className="text-xs font-bold uppercase tracking-widest" style={{ color: urgencyColor }}>
-          {URGENCY_LABEL[urgency]}
+        <span className="text-xs font-bold uppercase tracking-widest" style={{ color: simStatus.color }}>
+          {simStatus.label}
         </span>
         <p className="text-sm text-gray-200 leading-relaxed">{recommendation}</p>
       </div>
@@ -461,7 +502,8 @@ export default function ExitChoreographer({ user }: Props) {
       {/* Two SVG panels */}
       <div className="flex flex-col sm:flex-row gap-3">
         <FlowPanel
-          label="Natural flow"
+          label="Without StadiumPal"
+          subtitle="Crowd piles into nearest gate"
           matrix={data.naturalMatrix}
           gates={gates}
           sectionDots={sectionDots}
@@ -471,7 +513,8 @@ export default function ExitChoreographer({ user }: Props) {
           currentT={currentT}
         />
         <FlowPanel
-          label="Choreographed"
+          label="With StadiumPal"
+          subtitle="Crowd spread across all gates"
           matrix={data.choreographedMatrix}
           gates={gates}
           sectionDots={sectionDots}
@@ -481,6 +524,17 @@ export default function ExitChoreographer({ user }: Props) {
           currentT={currentT}
         />
       </div>
+
+      {/* Benefit comparison strip — peak reduction across the full simulation */}
+      {benefitStats && (
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-400 bg-gray-800 rounded-lg px-3 py-2 border border-gray-700">
+          <span>Peak gate load:</span>
+          <span className="font-semibold text-red-400">{Math.round(benefitStats.naturalPeak * 100)}% capacity</span>
+          <span>→</span>
+          <span className="font-semibold text-green-400">{Math.round(benefitStats.choreoPeak * 100)}% capacity</span>
+          <span className="text-gray-500">({benefitStats.saved}% less congested)</span>
+        </div>
+      )}
 
       {/* Playback controls + scrubber */}
       <div className="flex items-center gap-3" role="group" aria-label="Playback controls">
@@ -517,17 +571,24 @@ export default function ExitChoreographer({ user }: Props) {
           aria-valuenow={Math.round(currentT)}
           aria-valuemin={FLOW_START}
           aria-valuemax={FLOW_END}
-          aria-valuetext={`Match minute ${Math.round(currentT)}`}
+          aria-valuetext={`Minute ${Math.round(currentT)} of 220`}
           className="flex-1 accent-indigo-500"
         />
 
-        {/* Current time readout */}
-        <span
-          className="text-xs text-gray-400 tabular-nums w-10 text-right flex-shrink-0"
-          aria-hidden="true"
-        >
-          T+{Math.round(currentT)}
-        </span>
+        {/* Current time readout — relative to departure time */}
+        {(() => {
+          const relMin = Math.round(currentT - userAssignment.leaveAtElapsed);
+          const scrubLabel = relMin === 0 ? "Leave!" : relMin < 0 ? `${relMin} min` : `+${relMin} min`;
+          return (
+            <span
+              className="text-xs tabular-nums w-14 text-right flex-shrink-0"
+              style={{ color: relMin >= 0 ? urgencyColor : "#9ca3af" }}
+              aria-hidden="true"
+            >
+              {scrubLabel}
+            </span>
+          );
+        })()}
       </div>
 
       {/* User assignment card */}
@@ -545,21 +606,42 @@ export default function ExitChoreographer({ user }: Props) {
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500" id="ec-wait-label">Est. wait</p>
-            <p
-              className="text-lg font-bold tabular-nums"
-              style={{ color: urgencyColor }}
-              aria-labelledby="ec-wait-label"
-            >
-              ~{userAssignment.predictedWait.toFixed(1)} min
-            </p>
+            <p className="text-xs text-gray-500" id="ec-wait-label">Est. wait if you leave now</p>
+            {(() => {
+              // Scale server-side predictedWait by gate load at current animation T vs load at leaveAtElapsed
+              const leaveAtIdx = clamp(userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
+              const loadAtLeave = data.choreographedMatrix[userAssignment.gateId]?.[leaveAtIdx] ?? 1;
+              const loadNow = data.choreographedMatrix[userAssignment.gateId]?.[tIdx] ?? 0;
+              const scaledWait = loadAtLeave > 0
+                ? Math.max(0.5, Math.round(userAssignment.predictedWait * (loadNow / loadAtLeave) * 10) / 10)
+                : userAssignment.predictedWait;
+              const waitColor = scaledWait >= userAssignment.predictedWait ? urgencyColor : "#22c55e";
+              return (
+                <p className="text-lg font-bold tabular-nums" style={{ color: waitColor }} aria-labelledby="ec-wait-label">
+                  ~{scaledWait.toFixed(1)} min
+                </p>
+              );
+            })()}
           </div>
-          <div>
-            <p className="text-xs text-gray-500" id="ec-leave-label">Leave at</p>
-            <p className="text-lg font-bold tabular-nums text-gray-300" aria-labelledby="ec-leave-label">
-              T+{userAssignment.leaveAtElapsed}
-            </p>
-          </div>
+          {(() => {
+            // Same scaledWait formula as the cell above, recomputed here to compare against peak
+            const leaveAtIdx = clamp(userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
+            const loadAtLeave = data.choreographedMatrix[userAssignment.gateId]?.[leaveAtIdx] ?? 1;
+            const loadNow = data.choreographedMatrix[userAssignment.gateId]?.[tIdx] ?? 0;
+            const scaledWait = loadAtLeave > 0
+              ? Math.max(0.5, Math.round(userAssignment.predictedWait * (loadNow / loadAtLeave) * 10) / 10)
+              : userAssignment.predictedWait;
+            const saved = Math.max(0, Math.round((peakWait - scaledWait) * 10) / 10);
+            const color = saved >= 5 ? "#22c55e" : saved >= 1 ? "#eab308" : "#ef4444";
+            return (
+              <div>
+                <p className="text-xs text-gray-500" id="ec-saved-label">Saved vs peak</p>
+                <p className="text-lg font-bold tabular-nums" style={{ color }} aria-labelledby="ec-saved-label">
+                  ~{saved.toFixed(1)} min
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
