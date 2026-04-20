@@ -1,28 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useMemo } from "react";
 import type { AppUser } from "@/lib/user";
 import type { FlowMatrix, SectionConfig, SectionGateEntry, GateStation } from "@/types/venue";
 import venueConfig from "../../venues/chinnaswamy.json";
 import { FLOW_START, FLOW_END, FLOW_LENGTH } from "@/lib/crowdFlow";
+import { useExitPlanData } from "@/hooks/useExitPlanData";
+import { useExitAnimation } from "@/hooks/useExitAnimation";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PLAY_SPEED = 1.5;           // match-minutes per wall-second (45 min in 30 sec)
 const FANS_PER_DOT: number = (venueConfig.visualization as { fansPerDot: number }).fansPerDot;
 
 const URGENCY_COLOR: Record<string, string> = {
   low: "#eab308",
   medium: "#f97316",
   high: "#ef4444",
-};
-
-const URGENCY_LABEL: Record<string, string> = {
-  low: "Low — plan your exit",
-  medium: "Medium — start moving",
-  high: "High — leave now",
 };
 
 // Static lookups derived from venue config — computed once at module level
@@ -32,23 +27,6 @@ const SECTION_GATE_MAP = venueConfig.sectionGateMap as SectionGateEntry[];
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface UserAssignment {
-  gateId: string;
-  gateName: string;
-  gatePosition: { x: number; y: number };
-  walkMinutes: number;
-  leaveAtElapsed: number;
-  predictedWait: number;
-}
-
-interface ExitPlanData {
-  urgency: "low" | "medium" | "high";
-  naturalMatrix: FlowMatrix;
-  choreographedMatrix: FlowMatrix;
-  userAssignment: UserAssignment;
-  recommendation: string;
-}
 
 interface DotGroup {
   sectionId: string;
@@ -85,11 +63,7 @@ function getSectionRate(section: SectionConfig, t: number): number {
 }
 
 // Build animated dot groups for all sections at currentT
-function buildDots(
-  gates: GateStation[],
-  userSectionId: string,
-  currentT: number
-): DotGroup[] {
+function buildDots(gates: GateStation[], userSectionId: string, currentT: number): DotGroup[] {
   return SECTIONS.flatMap((section) => {
     const entry = SECTION_GATE_MAP.find((m) => m.section === section.id);
     if (!entry) return [];
@@ -113,6 +87,19 @@ function buildDots(
 
     return [{ sectionId: section.id, isUser: section.id === userSectionId, dots }];
   });
+}
+
+// Scales predictedWait by the gate load ratio at currentT vs at optimal leave time
+function calcScaledWait(
+  predictedWait: number,
+  loads: number[],
+  leaveAtIdx: number,
+  tIdx: number
+): number {
+  const loadAtLeave = loads[leaveAtIdx] ?? 1;
+  const loadNow = loads[tIdx] ?? 0;
+  if (loadAtLeave <= 0) return predictedWait;
+  return Math.max(0.5, Math.round(predictedWait * (loadNow / loadAtLeave) * 10) / 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -278,110 +265,8 @@ function FlowPanel({
 type Props = { user: AppUser };
 
 export default function ExitChoreographer({ user }: Props) {
-  const [data, setData] = useState<ExitPlanData | null>(null);
-  const [currentT, setCurrentT] = useState<number>(FLOW_START);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-  const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
-  const hasAutoPlayedRef = useRef(false);
-  // Shadow ref keeps RAF closure in sync with isPlaying state
-  const isPlayingRef = useRef(false);
-  isPlayingRef.current = isPlaying;
-
-  // ---------------------------------------------------------------------------
-  // Data fetch — on mount and every 5 minutes
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchPlan() {
-      try {
-        const res = await fetch("/api/exit-plan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.uid,
-            matchStartedAt: user.matchStartedAt,
-            seat: user.seat,
-            preferences: user.preferences,
-          }),
-        });
-        if (!res.ok || cancelled) return;
-        const json = (await res.json()) as { urgency: string } & Record<string, unknown>;
-        if (json.urgency === "none" || cancelled) return;
-        setData(json as unknown as ExitPlanData);
-      } catch {
-        // best-effort — exit plan is non-critical
-      }
-    }
-
-    fetchPlan();
-    const interval = setInterval(fetchPlan, 5 * 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [user]);
-
-  // ---------------------------------------------------------------------------
-  // Auto-play once when data first arrives — start 5 min before departure so the
-  // countdown goes "In 5 min → In 4 min → ... → Now!" during the animation.
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (data && !hasAutoPlayedRef.current) {
-      hasAutoPlayedRef.current = true;
-      const startT = Math.max(FLOW_START, data.userAssignment.leaveAtElapsed - 5);
-      setCurrentT(startT);
-      setIsPlaying(true);
-    }
-  }, [data]);
-
-  // ---------------------------------------------------------------------------
-  // Stop playback when timeline reaches the end
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (currentT >= FLOW_END && isPlaying) {
-      setIsPlaying(false);
-    }
-  }, [currentT, isPlaying]);
-
-  // ---------------------------------------------------------------------------
-  // requestAnimationFrame loop
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (!isPlaying) {
-      lastTimeRef.current = null;
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      return;
-    }
-
-    function step(now: number) {
-      if (!isPlayingRef.current) return;
-
-      if (lastTimeRef.current !== null) {
-        const dtSec = (now - lastTimeRef.current) / 1000;
-        const dT = dtSec * PLAY_SPEED;
-        setCurrentT((prev) => Math.min(FLOW_END, prev + dT));
-      }
-
-      lastTimeRef.current = now;
-      rafRef.current = requestAnimationFrame(step);
-    }
-
-    rafRef.current = requestAnimationFrame(step);
-
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      lastTimeRef.current = null;
-    };
-  }, [isPlaying]);
+  const { data } = useExitPlanData(user);
+  const { currentT, isPlaying, tIdx, togglePlay, reset, scrub } = useExitAnimation(data);
 
   // ---------------------------------------------------------------------------
   // Static derived data
@@ -424,8 +309,6 @@ export default function ExitChoreographer({ user }: Props) {
   // ---------------------------------------------------------------------------
   // Per-frame derived data (currentT-dependent)
   // ---------------------------------------------------------------------------
-  const tIdx = clamp(Math.floor(currentT) - FLOW_START, 0, FLOW_LENGTH - 1);
-
   const sectionDots = buildDots(gates, user.seat.section, currentT);
 
   // User dot: physics-based — at section before leaveAtElapsed, walks to gate after
@@ -459,19 +342,13 @@ export default function ExitChoreographer({ user }: Props) {
         ? { label: "GO NOW — LEAVE IMMEDIATELY", color: "#ef4444" }
         : { label: `${Math.round(-minsToLeave)} MIN LATE — WAIT TIME RISING`, color: "#ef4444" };
 
-  function togglePlay() {
-    if (currentT >= FLOW_END) {
-      setCurrentT(FLOW_START);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying((p) => !p);
-    }
-  }
-
-  function reset() {
-    setIsPlaying(false);
-    setCurrentT(FLOW_START);
-  }
+  // Scaled wait — computed once per render for both the "Est. wait" and "Saved vs peak" cells
+  const choreoLoads = data.choreographedMatrix[userAssignment.gateId] ?? [];
+  const leaveAtIdx = clamp(userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
+  const scaledWait = calcScaledWait(userAssignment.predictedWait, choreoLoads, leaveAtIdx, tIdx);
+  const waitColor = scaledWait >= userAssignment.predictedWait ? urgencyColor : "#22c55e";
+  const saved = Math.max(0, Math.round((peakWait - scaledWait) * 10) / 10);
+  const savedColor = saved >= 5 ? "#22c55e" : saved >= 1 ? "#eab308" : "#ef4444";
 
   return (
     <section className="flex flex-col gap-4 mt-4" aria-label="Exit Choreographer">
@@ -563,10 +440,7 @@ export default function ExitChoreographer({ user }: Props) {
           max={FLOW_END}
           step={0.1}
           value={currentT}
-          onChange={(e) => {
-            setIsPlaying(false);
-            setCurrentT(Number(e.target.value));
-          }}
+          onChange={(e) => scrub(Number(e.target.value))}
           aria-label="Exit timeline — match minute"
           aria-valuenow={Math.round(currentT)}
           aria-valuemin={FLOW_START}
@@ -607,41 +481,16 @@ export default function ExitChoreographer({ user }: Props) {
           </div>
           <div>
             <p className="text-xs text-gray-500" id="ec-wait-label">Est. wait if you leave now</p>
-            {(() => {
-              // Scale server-side predictedWait by gate load at current animation T vs load at leaveAtElapsed
-              const leaveAtIdx = clamp(userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
-              const loadAtLeave = data.choreographedMatrix[userAssignment.gateId]?.[leaveAtIdx] ?? 1;
-              const loadNow = data.choreographedMatrix[userAssignment.gateId]?.[tIdx] ?? 0;
-              const scaledWait = loadAtLeave > 0
-                ? Math.max(0.5, Math.round(userAssignment.predictedWait * (loadNow / loadAtLeave) * 10) / 10)
-                : userAssignment.predictedWait;
-              const waitColor = scaledWait >= userAssignment.predictedWait ? urgencyColor : "#22c55e";
-              return (
-                <p className="text-lg font-bold tabular-nums" style={{ color: waitColor }} aria-labelledby="ec-wait-label">
-                  ~{scaledWait.toFixed(1)} min
-                </p>
-              );
-            })()}
+            <p className="text-lg font-bold tabular-nums" style={{ color: waitColor }} aria-labelledby="ec-wait-label">
+              ~{scaledWait.toFixed(1)} min
+            </p>
           </div>
-          {(() => {
-            // Same scaledWait formula as the cell above, recomputed here to compare against peak
-            const leaveAtIdx = clamp(userAssignment.leaveAtElapsed - FLOW_START, 0, FLOW_LENGTH - 1);
-            const loadAtLeave = data.choreographedMatrix[userAssignment.gateId]?.[leaveAtIdx] ?? 1;
-            const loadNow = data.choreographedMatrix[userAssignment.gateId]?.[tIdx] ?? 0;
-            const scaledWait = loadAtLeave > 0
-              ? Math.max(0.5, Math.round(userAssignment.predictedWait * (loadNow / loadAtLeave) * 10) / 10)
-              : userAssignment.predictedWait;
-            const saved = Math.max(0, Math.round((peakWait - scaledWait) * 10) / 10);
-            const color = saved >= 5 ? "#22c55e" : saved >= 1 ? "#eab308" : "#ef4444";
-            return (
-              <div>
-                <p className="text-xs text-gray-500" id="ec-saved-label">Saved vs peak</p>
-                <p className="text-lg font-bold tabular-nums" style={{ color }} aria-labelledby="ec-saved-label">
-                  ~{saved.toFixed(1)} min
-                </p>
-              </div>
-            );
-          })()}
+          <div>
+            <p className="text-xs text-gray-500" id="ec-saved-label">Saved vs peak</p>
+            <p className="text-lg font-bold tabular-nums" style={{ color: savedColor }} aria-labelledby="ec-saved-label">
+              ~{saved.toFixed(1)} min
+            </p>
+          </div>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { decideNudge } from "@/lib/agent";
+import { getRemoteConfigValue } from "@/lib/remoteConfig";
 import { logger } from "@/lib/logger";
 import { getWaitTime } from "@/lib/timeline";
 import venueConfig from "../../../../../venues/chinnaswamy.json";
@@ -55,12 +56,11 @@ export async function POST(req: NextRequest) {
     ) / 10,
   }));
 
-  const decision = await decideNudge({
-    user: { uid: userId, matchStartedAt, seat, preferences },
-    venueState,
-    elapsedMinutes: elapsed,
-    recentNudges,
-  });
+  const cooldownMinutes = await getRemoteConfigValue("nudgeCooldownMinutes", 5);
+  const decision = await decideNudge(
+    { user: { uid: userId, matchStartedAt, seat, preferences }, venueState, elapsedMinutes: elapsed, recentNudges },
+    cooldownMinutes
+  );
 
   if (decision.action === "nudge") {
     const nudgeRef = adminDb.collection("nudges").doc();

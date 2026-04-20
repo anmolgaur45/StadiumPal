@@ -1,7 +1,7 @@
 "use client";
 
 import { signInAnonymously } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import type { Seat, UserPreferences } from "@/types/venue";
 
@@ -38,6 +38,8 @@ export async function initUser(): Promise<AppUser> {
 
     if (snap.exists()) {
       const d = snap.data();
+      // Update lastSeenAt so Cloud Scheduler knows this user is active
+      await updateDoc(ref, { lastSeenAt: serverTimestamp() });
       return {
         uid: user.uid,
         matchStartedAt: d.matchStartedAt.toMillis(),
@@ -52,6 +54,7 @@ export async function initUser(): Promise<AppUser> {
       seat: DEFAULT_SEAT,
       preferences: DEFAULT_PREFS,
       createdAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
     });
 
     // Re-read to get the server-assigned timestamp

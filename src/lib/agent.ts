@@ -26,7 +26,7 @@ const DecisionSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
-const COOLDOWN_MINUTES = 5;
+const DEFAULT_COOLDOWN_MINUTES = 5;
 const MATCH_DURATION = 210;
 
 function matchPhase(elapsed: number): string {
@@ -96,12 +96,15 @@ OR
  * Pure function — cooldown enforced before Gemini is called.
  * Never throws: any failure returns {action: "wait"}.
  */
-export async function decideNudge(input: AgentInput): Promise<AgentDecision> {
+export async function decideNudge(
+  input: AgentInput,
+  cooldownMinutes = DEFAULT_COOLDOWN_MINUTES
+): Promise<AgentDecision> {
   // Enforce cooldown before calling Gemini — prevents spam and saves API cost
   const lastNudge = input.recentNudges[0];
   if (lastNudge) {
     const minutesSinceLast = input.elapsedMinutes - lastNudge.elapsedMinutes;
-    if (minutesSinceLast < COOLDOWN_MINUTES) {
+    if (minutesSinceLast < cooldownMinutes) {
       return {
         action: "wait",
         reasoning: `cooldown: ${minutesSinceLast.toFixed(1)} min since last nudge`,

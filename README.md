@@ -42,7 +42,7 @@ lib/
   └── logger.ts       — structured JSON logs for Cloud Logging
 ```
 
-**Six Google services:**
+**Eight Google services:**
 
 | Service | Role |
 |---|---|
@@ -51,6 +51,8 @@ lib/
 | Firebase Anonymous Auth | Anonymous session, no signup required |
 | Cloud Run | Hosts the Next.js app (scale-to-zero, `output: "standalone"`) |
 | Cloud Logging | Structured logs from every API route via `lib/logger.ts` |
+| Firebase Remote Config | Nudge cooldown and surge threshold read from Remote Config at runtime, no redeploy needed |
+| Cloud Scheduler | Calls `/api/agent/batch-tick` every minute to run nudge decisions for all active users |
 | Firebase CLI | Deploys Firestore security rules and composite indexes |
 
 ---
@@ -141,6 +143,31 @@ Venue state (wait times at concessions, restrooms, and gates) is driven by a pre
 **Timing assumptions** — the 210-minute window and wait-curve shapes (entry rush at T=0, innings-break spike at T≈100, exit surge at T≈200) are reasonable approximations for an IPL T20 night match. Real match durations vary: a 20-over innings can run 75–110+ minutes depending on bowling pace, DRS reviews, strategic timeouts, and rain delays.
 
 In production, this would be replaced by live data from POS systems, gate scanners, and CV cameras.
+
+---
+
+## Cloud Scheduler setup
+
+After deploying to Cloud Run, create a scheduled job to call the batch-tick endpoint every minute:
+
+```bash
+gcloud scheduler jobs create http stadiumpal-agent-tick \
+  --schedule="* * * * *" \
+  --uri="https://<cloud-run-url>/api/agent/batch-tick" \
+  --http-method=POST \
+  --headers="X-CloudScheduler=true" \
+  --oidc-service-account-email=<sa>@<project>.iam.gserviceaccount.com \
+  --location=asia-south1
+```
+
+The endpoint reads all users active in the last 5 minutes from Firestore, runs the Gemini nudge decision for each, and writes any nudges to Firestore. Clients pick them up via the existing `onSnapshot` listener. Client-side polling remains as a local dev fallback.
+
+Firebase Remote Config keys to set in the Firebase console:
+
+| Key | Default | Effect |
+|---|---|---|
+| `nudgeCooldownMinutes` | `5` | Minimum minutes between nudges per user |
+| `exitSurgeThreshold` | `1.2` | Gate load multiplier flagged as surge |
 
 ---
 
