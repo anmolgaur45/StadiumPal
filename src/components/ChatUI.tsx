@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { AppUser } from "@/lib/user";
 
 type Message = { role: "user" | "model"; content: string };
@@ -23,9 +23,9 @@ export default function ChatUI({ user }: ChatUIProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages]);
 
-  async function sendMessage() {
+  const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
 
@@ -57,14 +57,14 @@ export default function ChatUI({ user }: ChatUIProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [messages, input, loading, user]);
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  }
+  }, [sendMessage]);
 
   return (
     <div className="flex flex-col h-full">

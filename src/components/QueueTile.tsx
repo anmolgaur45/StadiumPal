@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { StationWithWait } from "@/types/venue";
 
 const CATEGORY_ICON: Record<string, string> = {
@@ -23,7 +24,7 @@ type Props = {
   station: StationWithWait;
 };
 
-export default function QueueTile({ station }: Props) {
+export default memo(function QueueTile({ station }: Props) {
   const currentColor = waitColor(station.waitMinutes);
   const forecastColor = waitColor(station.forecastMinutes);
   const icon = CATEGORY_ICON[station.category] ?? "📍";
@@ -49,4 +50,4 @@ export default function QueueTile({ station }: Props) {
       </div>
     </div>
   );
-}
+});

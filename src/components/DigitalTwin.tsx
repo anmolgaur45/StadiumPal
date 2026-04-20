@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getWaitTime } from "@/lib/timeline";
 import QueueTile from "./QueueTile";
 import type { AppUser } from "@/lib/user";
@@ -79,16 +79,27 @@ export default function DigitalTwin({ user }: Props) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [user.matchStartedAt]);
 
-  function selectStation(id: string) {
-    const next = activeStation === id ? null : id;
-    setActiveStation(next);
-    if (next) {
-      // Give React a tick to render the panel before scrolling to it
-      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
-    }
-  }
+  const selectStation = useCallback((id: string) => {
+    setActiveStation((prev) => {
+      const next = prev === id ? null : id;
+      if (next) {
+        setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      }
+      return next;
+    });
+  }, []);
 
   const active = activeStation ? stations.find((s) => s.id === activeStation) ?? null : null;
+
+  const concessionStations = useMemo(
+    () => stations.filter((s) => s.category === "concession").sort((a, b) => a.waitMinutes - b.waitMinutes),
+    [stations]
+  );
+  const restroomStations = useMemo(
+    () => stations.filter((s) => s.category === "restroom").sort((a, b) => a.waitMinutes - b.waitMinutes),
+    [stations]
+  );
+
   const seatX = 50;
   const seatY = 50;
 
@@ -270,10 +281,7 @@ export default function DigitalTwin({ user }: Props) {
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-widest mb-2" aria-hidden="true">Concessions</p>
         <div role="list" aria-label="Concession stand queue times" className="flex gap-3 overflow-x-auto pb-1">
-          {stations
-            .filter((s) => s.category === "concession")
-            .sort((a, b) => a.waitMinutes - b.waitMinutes)
-            .map((s) => <QueueTile key={s.id} station={s} />)}
+          {concessionStations.map((s) => <QueueTile key={s.id} station={s} />)}
         </div>
       </div>
 
@@ -281,10 +289,7 @@ export default function DigitalTwin({ user }: Props) {
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-widest mb-2" aria-hidden="true">Restrooms</p>
         <div role="list" aria-label="Restroom queue times" className="flex gap-3 overflow-x-auto pb-1">
-          {stations
-            .filter((s) => s.category === "restroom")
-            .sort((a, b) => a.waitMinutes - b.waitMinutes)
-            .map((s) => <QueueTile key={s.id} station={s} />)}
+          {restroomStations.map((s) => <QueueTile key={s.id} station={s} />)}
         </div>
       </div>
 

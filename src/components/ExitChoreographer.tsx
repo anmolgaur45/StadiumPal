@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { AppUser } from "@/lib/user";
 import type { FlowMatrix, SectionConfig, SectionGateEntry, GateStation } from "@/types/venue";
 import venueConfig from "../../venues/chinnaswamy.json";
@@ -23,6 +23,10 @@ const URGENCY_COLOR: Record<string, string> = {
 // Static lookups derived from venue config — computed once at module level
 const SECTIONS = venueConfig.sections as SectionConfig[];
 const SECTION_GATE_MAP = venueConfig.sectionGateMap as SectionGateEntry[];
+const gates = (venueConfig.stations as unknown as GateStation[]).filter((s) => s.category === "gate");
+// O(1) lookups for the hot animation path
+const GATE_MAP = new Map(gates.map((g) => [g.id, g]));
+const SECTION_TO_GATE = new Map(SECTION_GATE_MAP.map((e) => [e.section, e]));
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,11 +67,11 @@ function getSectionRate(section: SectionConfig, t: number): number {
 }
 
 // Build animated dot groups for all sections at currentT
-function buildDots(gates: GateStation[], userSectionId: string, currentT: number): DotGroup[] {
+function buildDots(userSectionId: string, currentT: number): DotGroup[] {
   return SECTIONS.flatMap((section) => {
-    const entry = SECTION_GATE_MAP.find((m) => m.section === section.id);
+    const entry = SECTION_TO_GATE.get(section.id);
     if (!entry) return [];
-    const gate = gates.find((g) => g.id === entry.gate);
+    const gate = GATE_MAP.get(entry.gate);
     if (!gate) return [];
 
     const rate = getSectionRate(section, currentT);
@@ -106,7 +110,7 @@ function calcScaledWait(
 // Stadium schematic — inlined per-panel so each SVG is self-contained
 // ---------------------------------------------------------------------------
 
-function StadiumBase() {
+const StadiumBase = memo(function StadiumBase() {
   return (
     <>
       <ellipse cx="50" cy="50" rx="46" ry="46" fill="#111827" stroke="#374151" strokeWidth="0.5" aria-hidden="true" />
@@ -115,7 +119,7 @@ function StadiumBase() {
       <ellipse cx="50" cy="50" rx="34" ry="34" fill="none" stroke="#1f2937" strokeWidth="10" aria-hidden="true" />
     </>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Flow panel
@@ -133,7 +137,7 @@ interface PanelProps {
   currentT: number;
 }
 
-function FlowPanel({
+const FlowPanel = memo(function FlowPanel({
   label,
   subtitle,
   matrix,
@@ -256,7 +260,7 @@ function FlowPanel({
       </div>
     </div>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -271,11 +275,6 @@ export default function ExitChoreographer({ user }: Props) {
   // ---------------------------------------------------------------------------
   // Static derived data
   // ---------------------------------------------------------------------------
-  const gates = useMemo<GateStation[]>(
-    () => (venueConfig.stations as unknown as GateStation[]).filter((s) => s.category === "gate"),
-    []
-  );
-
   const userSection = useMemo(
     () => SECTIONS.find((s) => s.id === user.seat.section) ?? null,
     [user.seat.section]
@@ -292,7 +291,7 @@ export default function ExitChoreographer({ user }: Props) {
     );
     const saved = Math.round((naturalPeak - choreoPeak) * 100);
     return saved > 0 ? { naturalPeak, choreoPeak, saved } : null;
-  }, [data, gates]);
+  }, [data]);
 
   // Worst-case wait at the user's gate across the whole timeline — used for the "saved vs peak" metric
   const peakWait = useMemo(() => {
@@ -309,7 +308,10 @@ export default function ExitChoreographer({ user }: Props) {
   // ---------------------------------------------------------------------------
   // Per-frame derived data (currentT-dependent)
   // ---------------------------------------------------------------------------
-  const sectionDots = buildDots(gates, user.seat.section, currentT);
+  const sectionDots = useMemo(
+    () => buildDots(user.seat.section, currentT),
+    [user.seat.section, currentT]
+  );
 
   // User dot: physics-based — at section before leaveAtElapsed, walks to gate after
   const userDot = useMemo(() => {

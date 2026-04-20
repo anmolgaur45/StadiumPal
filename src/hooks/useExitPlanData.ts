@@ -54,7 +54,7 @@ export function useExitPlanData(user: AppUser): { data: ExitPlanData | null } {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user.uid, user.matchStartedAt, user.seat.section, user.seat.row, user.seat.number]);
 
   return { data };
 }
