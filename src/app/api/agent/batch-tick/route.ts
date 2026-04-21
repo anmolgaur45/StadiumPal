@@ -4,11 +4,9 @@ import { adminDb } from "@/lib/firebase-admin";
 import { decideNudge } from "@/lib/agent";
 import { getRemoteConfigValue } from "@/lib/remoteConfig";
 import { logger } from "@/lib/logger";
-import { getWaitTime } from "@/lib/timeline";
-import venueConfig from "../../../../../venues/chinnaswamy.json";
-import type { Station, StationWithWait } from "@/types/venue";
+import { MATCH_DURATION } from "@/lib/crowdFlow";
+import { buildVenueState } from "@/lib/venueState";
 
-const MATCH_DURATION = 210;
 // Users active within the last 5 minutes are eligible for nudges
 const ACTIVE_WINDOW_MS = 5 * 60_000;
 
@@ -68,11 +66,7 @@ export async function POST(req: NextRequest) {
       elapsedMinutes: doc.data().elapsedMinutes as number,
     }));
 
-    const venueState: StationWithWait[] = (venueConfig.stations as Station[]).map((s) => ({
-      ...s,
-      waitMinutes: Math.round(getWaitTime(s.id, elapsed) * 10) / 10,
-      forecastMinutes: Math.round(getWaitTime(s.id, Math.min(MATCH_DURATION, elapsed + 10)) * 10) / 10,
-    }));
+    const venueState = buildVenueState(elapsed);
 
     const decision = await decideNudge(
       { user: { uid: userId, matchStartedAt, seat, preferences }, venueState, elapsedMinutes: elapsed, recentNudges },

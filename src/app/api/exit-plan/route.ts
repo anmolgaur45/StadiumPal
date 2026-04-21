@@ -4,10 +4,9 @@ import { buildNaturalMatrix } from "@/lib/crowdFlow";
 import { buildExitPlan } from "@/lib/exitPlan";
 import { explainExitPlan } from "@/lib/exitExplainer";
 import { logger } from "@/lib/logger";
+import { MATCH_DURATION } from "@/lib/crowdFlow";
 import venueConfig from "../../../../venues/chinnaswamy.json";
 import type { SectionConfig, SectionGateEntry, GateStation } from "@/types/venue";
-
-const MATCH_DURATION = 210;
 
 const ExitPlanRequestSchema = z.object({
   userId: z.string().min(1),

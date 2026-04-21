@@ -5,11 +5,8 @@ import { adminDb } from "@/lib/firebase-admin";
 import { decideNudge } from "@/lib/agent";
 import { getRemoteConfigValue } from "@/lib/remoteConfig";
 import { logger } from "@/lib/logger";
-import { getWaitTime } from "@/lib/timeline";
-import venueConfig from "../../../../../venues/chinnaswamy.json";
-import type { Station, StationWithWait } from "@/types/venue";
-
-const MATCH_DURATION = 210;
+import { MATCH_DURATION } from "@/lib/crowdFlow";
+import { buildVenueState } from "@/lib/venueState";
 
 const TickRequestSchema = z.object({
   userId: z.string().min(1),
@@ -47,14 +44,7 @@ export async function POST(req: NextRequest) {
     elapsedMinutes: d.data().elapsedMinutes as number,
   }));
 
-  // Build venue state from the pre-baked timeline
-  const venueState: StationWithWait[] = (venueConfig.stations as Station[]).map((s) => ({
-    ...s,
-    waitMinutes: Math.round(getWaitTime(s.id, elapsed) * 10) / 10,
-    forecastMinutes: Math.round(
-      getWaitTime(s.id, Math.min(MATCH_DURATION, elapsed + 10)) * 10
-    ) / 10,
-  }));
+  const venueState = buildVenueState(elapsed);
 
   const cooldownMinutes = await getRemoteConfigValue("nudgeCooldownMinutes", 5);
   const decision = await decideNudge(

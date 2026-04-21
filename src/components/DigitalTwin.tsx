@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getWaitTime } from "@/lib/timeline";
+import { MATCH_DURATION } from "@/lib/crowdFlow";
 import QueueTile from "./QueueTile";
 import type { AppUser } from "@/lib/user";
 import type { Station, StationWithWait } from "@/types/venue";
 import venueData from "../../venues/chinnaswamy.json";
-
-const MATCH_DURATION = 210; // minutes
 
 function heatColor(waitMinutes: number): string {
   if (waitMinutes <= 5) return "#22c55e";   // green-500

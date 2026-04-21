@@ -1,7 +1,8 @@
 import type { SectionConfig, SectionGateEntry, FlowMatrix } from "@/types/venue";
 
-export const FLOW_START = 175;  // T=175 (final overs)
-export const FLOW_END = 220;    // T=220 (10 min post-match)
+export const MATCH_DURATION = 210; // full T20 IPL window in minutes
+export const FLOW_START = 175;     // T=175 (final overs)
+export const FLOW_END = 220;       // T=220 (10 min post-match)
 export const FLOW_LENGTH = FLOW_END - FLOW_START + 1; // 46 slots
 
 // Exit bucket windows (match minutes)

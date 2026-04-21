@@ -352,6 +352,9 @@ export default function ExitChoreographer({ user }: Props) {
   const saved = Math.max(0, Math.round((peakWait - scaledWait) * 10) / 10);
   const savedColor = saved >= 5 ? "#22c55e" : saved >= 1 ? "#eab308" : "#ef4444";
 
+  const relMin = Math.round(currentT - userAssignment.leaveAtElapsed);
+  const scrubLabel = relMin === 0 ? "Leave!" : relMin < 0 ? `${relMin} min` : `+${relMin} min`;
+
   return (
     <section className="flex flex-col gap-4 mt-4" aria-label="Exit Choreographer">
       {/* Heading */}
@@ -452,19 +455,13 @@ export default function ExitChoreographer({ user }: Props) {
         />
 
         {/* Current time readout — relative to departure time */}
-        {(() => {
-          const relMin = Math.round(currentT - userAssignment.leaveAtElapsed);
-          const scrubLabel = relMin === 0 ? "Leave!" : relMin < 0 ? `${relMin} min` : `+${relMin} min`;
-          return (
-            <span
-              className="text-xs tabular-nums w-14 text-right flex-shrink-0"
-              style={{ color: relMin >= 0 ? urgencyColor : "#9ca3af" }}
-              aria-hidden="true"
-            >
-              {scrubLabel}
-            </span>
-          );
-        })()}
+        <span
+          className="text-xs tabular-nums w-14 text-right flex-shrink-0"
+          style={{ color: relMin >= 0 ? urgencyColor : "#9ca3af" }}
+          aria-hidden="true"
+        >
+          {scrubLabel}
+        </span>
       </div>
 
       {/* User assignment card */}

@@ -6,6 +6,10 @@ import type { ExitPlanData } from "./useExitPlanData";
 
 const PLAY_SPEED = 1.5; // match-minutes per wall-second (45 min in 30 sec)
 
+/**
+ * Manages the RAF-driven animation loop for the exit timeline scrubber.
+ * Auto-plays once when data arrives; stops at FLOW_END. Never throws.
+ */
 export function useExitAnimation(data: ExitPlanData | null) {
   const [currentT, setCurrentT] = useState<number>(FLOW_START);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);

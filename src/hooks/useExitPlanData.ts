@@ -21,6 +21,10 @@ export interface ExitPlanData {
   recommendation: string;
 }
 
+/**
+ * Fetches the exit plan for the current user and re-polls every 5 minutes.
+ * Returns null until the first successful response or when urgency is "none".
+ */
 export function useExitPlanData(user: AppUser): { data: ExitPlanData | null } {
   const [data, setData] = useState<ExitPlanData | null>(null);
 

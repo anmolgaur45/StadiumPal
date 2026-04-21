@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getModel } from "./gemini";
 import { logger } from "./logger";
+import { MATCH_DURATION } from "./crowdFlow";
 import type { StationWithWait, User } from "@/types/venue";
 
 export type AgentInput = {
@@ -27,9 +28,8 @@ const DecisionSchema = z.discriminatedUnion("action", [
 ]);
 
 const DEFAULT_COOLDOWN_MINUTES = 5;
-const MATCH_DURATION = 210;
 
-function matchPhase(elapsed: number): string {
+export function matchPhase(elapsed: number): string {
   if (elapsed < 95) {
     const over = Math.min(20, Math.floor((elapsed / 95) * 20));
     return `1st innings, over ${over}/20`;

@@ -5,10 +5,10 @@ import type { Tool, Part } from "@google-cloud/vertexai";
 import { getModel } from "@/lib/gemini";
 import { getWaitTime } from "@/lib/timeline";
 import { logger } from "@/lib/logger";
+import { MATCH_DURATION } from "@/lib/crowdFlow";
+import { matchPhase } from "@/lib/agent";
 import venueConfig from "../../../../venues/chinnaswamy.json";
 import type { Station } from "@/types/venue";
-
-const MATCH_DURATION = 210;
 
 const MessageSchema = z.object({
   role: z.enum(["user", "model"]),
@@ -24,16 +24,6 @@ const ChatRequestSchema = z.object({
 
 function computeElapsed(matchStartedAt: number): number {
   return Math.max(0, Math.min(MATCH_DURATION, (Date.now() - matchStartedAt) / 60_000));
-}
-
-function matchPhase(elapsed: number): string {
-  if (elapsed < 95) {
-    const over = Math.min(20, Math.floor((elapsed / 95) * 20));
-    return `1st innings, over ${over}/20`;
-  }
-  if (elapsed < 115) return "innings break";
-  const over = Math.min(20, Math.floor(((elapsed - 115) / 95) * 20));
-  return `2nd innings, over ${over}/20`;
 }
 
 function getVenueState(elapsed: number, category?: string) {
